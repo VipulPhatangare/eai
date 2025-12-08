@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pets vs Humans Detection System</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🐾</text></svg>">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🐾 Pets vs Humans Detection System</h1>
+            <p>Upload an image or video to detect pets and humans using YOLOv8</p>
+            
+            <!-- Tab Navigation -->
+            <div class="tab-navigation">
+                <button class="tab-btn active" data-tab="upload">📤 Upload & Process</button>
+                <button class="tab-btn" data-tab="live">🔴 Live Feed</button>
+            </div>
+        </header>
+
+        <main>
+            <!-- Upload Tab Content -->
+            <div class="tab-content active" id="upload-tab">
+            <!-- Upload Section -->
+            <section class="upload-section">
+                <div class="upload-box" id="uploadBox">
+                    <div class="upload-icon">📤</div>
+                    <h2>Upload Media</h2>
+                    <p>Drag and drop or click to select</p>
+                    <p class="file-types">Supported: JPG, PNG, GIF, MP4, AVI, MOV, MKV</p>
+                    <input type="file" id="fileInput" accept="image/*,video/*" hidden>
+                    <button class="btn btn-primary" id="selectFileBtn">Select File</button>
+                </div>
+
+                <!-- File Preview -->
+                <div class="file-preview" id="filePreview" style="display: none;">
+                    <div class="preview-header">
+                        <h3>Selected File</h3>
+                        <button class="btn btn-secondary" id="cancelBtn">✖ Cancel</button>
+                    </div>
+                    <div class="preview-content">
+                        <div class="preview-media" id="previewMedia"></div>
+                        <div class="preview-info">
+                            <p id="fileName"></p>
+                            <p id="fileSize"></p>
+                        </div>
+                    </div>
+                    <button class="btn btn-success" id="processBtn">🚀 Process File</button>
+                </div>
+            </section>
+
+            <!-- Processing Section -->
+            <section class="processing-section" id="processingSection" style="display: none;">
+                <div class="processing-box">
+                    <div class="spinner"></div>
+                    <h2>Processing...</h2>
+                    <p id="processingStatus">Analyzing media with AI...</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <div class="results-header">
+                    <h2>✅ Processing Complete!</h2>
+                    <button class="btn btn-secondary" id="newUploadBtn">Upload New File</button>
+                </div>
+
+                <!-- Comparison View -->
+                <div class="comparison-section">
+                    <div class="comparison-grid">
+                        <div class="media-column">
+                            <h3>Original</h3>
+                            <div class="media-container" id="originalMedia"></div>
+                        </div>
+                        <div class="media-column">
+                            <h3>Processed</h3>
+                            <div class="media-container" id="processedMedia"></div>
+                            <a href="#" class="btn btn-download" id="downloadBtn" download>
+                                ⬇️ Download Result
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Error Section -->
+            <section class="error-section" id="errorSection" style="display: none;">
+                <div class="error-box">
+                    <div class="error-icon">⚠️</div>
+                    <h2>Processing Failed</h2>
+                    <p id="errorMessage"></p>
+                    <button class="btn btn-primary" id="retryBtn">Try Again</button>
+                </div>
+            </section>
+            </div>
+            <!-- End Upload Tab -->
+
+            <!-- Live Feed Tab Content -->
+            <div class="tab-content" id="live-tab" style="display: none;">
+                <section class="live-section">
+                    <div class="live-header">
+                        <h2>📱 Live Phone Stream Detection</h2>
+                        <div class="live-controls">
+                            <button class="btn btn-success" id="connectPhoneBtn">
+                                🔌 Connect to Phone
+                            </button>
+                            <button class="btn btn-warning" id="testConnectionBtn">
+                                🧪 Test Connection
+                            </button>
+                            <button class="btn btn-danger" id="disconnectPhoneBtn" style="display: none;">
+                                ⏹️ Disconnect
+                            </button>
+                            <span class="status-indicator" id="connectionStatus">⚪ Not Connected</span>
+                        </div>
+                    </div>
+
+                    <div class="live-info-box">
+                        <p><strong>📡 Your Phone Stream Server:</strong> <a href="https://phone-stream.onrender.com/" target="_blank" style="color: var(--primary-color);">https://phone-stream.onrender.com/</a></p>
+                        
+                        <div style="margin: 15px 0; padding: 15px; background: rgba(79, 70, 229, 0.1); border-left: 4px solid var(--primary-color); border-radius: 8px;">
+                            <p><strong>🎯 Steps to Start:</strong></p>
+                            <ol style="margin-left: 20px; margin-top: 10px; color: var(--text-secondary);">
+                                <li>Open <strong>https://phone-stream.onrender.com/</strong> on your phone</li>
+                                <li>Click "Start Streaming" on your phone</li>
+                                <li>Come back here and click "🔌 Connect to Phone" below</li>
+                                <li>Watch the magic happen! 🎬</li>
+                            </ol>
+                        </div>
+                        
+                        <p><strong>🔧 Connection Status:</strong> <span id="phoneStreamStatus" style="font-weight: bold;">Not Connected</span></p>
+                        
+                        <div style="margin: 10px 0; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 0.9em;">
+                            <p><strong>💡 Alternative - Direct Connection:</strong></p>
+                            <p style="color: var(--text-secondary); margin: 5px 0;">
+                                For faster streaming, change your phone's connection URL to:<br>
+                                <code id="directConnectionUrl" style="background: rgba(255,255,255,0.1); padding: 5px 10px; border-radius: 5px; display: inline-block; margin: 5px 0;">Loading...</code>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="live-stats">
+                        <div class="stat-badge">
+                            <span class="stat-icon">🐾</span>
+                            <span id="livePetsCount">0</span> Pets
+                        </div>
+                        <div class="stat-badge">
+                            <span class="stat-icon">👤</span>
+                            <span id="liveHumansCount">0</span> Humans
+                        </div>
+                        <div class="stat-badge">
+                            <span class="stat-icon">⚡</span>
+                            <span id="liveFPS">0</span> FPS
+                        </div>
+                    </div>
+
+                    <div class="live-video-container">
+                        <canvas id="liveCanvas"></canvas>
+                        <div class="no-stream-message" id="noStreamMessage">
+                            <div class="no-stream-icon">📹</div>
+                            <h3>No Live Stream</h3>
+                            <p>Click "Connect to Phone" to start receiving live video feed</p>
+                        </div>
+                    </div>
+
+                    <div class="live-log">
+                        <h4>📋 Detection Log</h4>
+                        <div class="log-container" id="detectionLog">
+                            <p class="log-empty">Waiting for detections...</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+            <!-- End Live Feed Tab -->
+        </main>
+
+        <footer>
+            <p>Powered by YOLOv8 & Express.js | Made with ❤️</p>
+        </footer>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+    <script src="live.js"></script>
+</body>
+</html>
