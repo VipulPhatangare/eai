@@ -109,29 +109,36 @@ def process_video(input_path, output_path, model, class_names, HUMAN_CLASSES, PE
     
     print(f"[INFO] Video properties: {width}x{height} @ {fps}fps, {total_frames} frames")
     
-    # Create video writer with web-compatible codec
-    # Use X264 codec for best web compatibility
-    fourcc = cv2.VideoWriter_fourcc(*'X264')
-    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    # Create video writer with universally compatible codecs
+    # Try codecs in order of compatibility
+    codecs_to_try = [
+        ('mp4v', 'MPEG-4'),
+        ('MJPG', 'Motion JPEG'),
+        ('XVID', 'Xvid'),
+        ('X264', 'H.264')
+    ]
     
-    # If X264 fails, try avc1 (H.264)
-    if not out.isOpened():
-        print("[INFO] X264 codec not available, trying avc1...")
-        fourcc = cv2.VideoWriter_fourcc(*'avc1')
-        out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    out = None
+    used_codec = None
     
-    # If that fails, try mp4v
-    if not out.isOpened():
-        print("[INFO] avc1 codec not available, trying mp4v...")
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    for codec_name, codec_desc in codecs_to_try:
+        try:
+            fourcc = cv2.VideoWriter_fourcc(*codec_name)
+            out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+            if out.isOpened():
+                used_codec = codec_desc
+                print(f"[INFO] Using codec: {codec_desc} ({codec_name})")
+                break
+            else:
+                print(f"[INFO] {codec_desc} codec not available, trying next...")
+        except:
+            print(f"[INFO] Failed to initialize {codec_desc}, trying next...")
+            continue
     
-    if not out.isOpened():
+    if not out or not out.isOpened():
         print("[ERROR] Could not create video writer with any codec")
         cap.release()
         sys.exit(1)
-    
-    print(f"[INFO] Using codec: {fourcc}")
     
     frame_count = 0
     pet_alert_count = 0
