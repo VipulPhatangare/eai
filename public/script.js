@@ -181,7 +181,7 @@ function showResults(result) {
 
     // Show processed media
     processedMedia.innerHTML = '';
-    const outputUrl = `http://localhost:5000${result.outputUrl}?t=${Date.now()}`;
+    const outputUrl = `${result.outputUrl}?t=${Date.now()}`;
     
     if (result.fileType === 'image') {
         const img = document.createElement('img');

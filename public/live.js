@@ -159,7 +159,8 @@ async function fetchLocalIP() {
 function testConnection() {
     console.log('🧪 Testing WebSocket connection...');
     
-    const testWs = new WebSocket('ws://localhost:5000?type=browser');
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const testWs = new WebSocket(`${protocol}//${location.host}?type=browser`);
     
     testWs.onopen = () => {
         console.log('✅ Test: WebSocket connection successful!');
@@ -195,7 +196,8 @@ function connectToPhone() {
 
     try {
         // Send request via WebSocket to connect to phone stream server
-        ws = new WebSocket('ws://localhost:5000?type=browser');
+        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${protocol}//${location.host}?type=browser`);
         
         console.log('📡 WebSocket object created');
 
