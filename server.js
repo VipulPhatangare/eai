@@ -8,12 +8,13 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const cors = require('cors');
 const os = require('os');
+require('dotenv').config();
 
 const app = express();
 const server = http.createServer(app);
 
 // Logging control - set to false to only show errors
-const SHOW_LOGS = false;
+const SHOW_LOGS = process.env.SHOW_LOGS === 'true' || process.env.NODE_ENV !== 'production';
 const log = (...args) => SHOW_LOGS && console.log(...args);
 
 // Socket.IO for receiving processed frames in browser
@@ -32,6 +33,7 @@ const wss = new WebSocket.Server({
 });
 
 const PORT = process.env.PORT || 5010;
+const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE) || 100 * 1024 * 1024; // 100MB default
 
 // Middleware
 app.use(cors());
@@ -115,7 +117,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
+    limits: { fileSize: MAX_FILE_SIZE },
     fileFilter: (req, file, cb) => {
         const allowedTypes = /jpeg|jpg|png|gif|mp4|avi|mov|mkv/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -165,8 +167,16 @@ app.post('/upload', upload.single('file'), (req, res) => {
 
     log('[SERVER] Processing file:', inputPath);
 
+    // Determine Python command based on environment
+    const pythonCmd = process.env.NODE_ENV === 'production' 
+        ? path.join(__dirname, 'detect_wrapper.sh')
+        : 'python';
+    const pythonArgs = process.env.NODE_ENV === 'production'
+        ? [inputPath, outputPath]
+        : ['detect.py', inputPath, outputPath];
+
     // Call Python script
-    const pythonProcess = spawn('python', ['detect.py', inputPath, outputPath]);
+    const pythonProcess = spawn(pythonCmd, pythonArgs);
 
     let outputData = '';
     let errorData = '';
@@ -429,7 +439,16 @@ function processLiveFrame(frameData) {
 
     // Spawn Python process to detect objects in this frame
     log(`   🐍 Launching Python detection...`);
-    const pythonProcess = spawn('python', ['detect_live.py', tempFramePath]);
+    
+    // Determine Python command based on environment
+    const pythonCmd = process.env.NODE_ENV === 'production' 
+        ? path.join(__dirname, 'detect_live_wrapper.sh')
+        : 'python';
+    const pythonArgs = process.env.NODE_ENV === 'production'
+        ? [tempFramePath]
+        : ['detect_live.py', tempFramePath];
+    
+    const pythonProcess = spawn(pythonCmd, pythonArgs);
 
     let resultData = '';
     let errorData = '';
