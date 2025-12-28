@@ -33,7 +33,12 @@ let originalFileUrl = null;
 // Event Listeners
 selectFileBtn.addEventListener('click', () => fileInput.click());
 
-uploadBox.addEventListener('click', () => fileInput.click());
+uploadBox.addEventListener('click', (e) => {
+    // Only trigger if clicking on the box itself, not the button
+    if (e.target === uploadBox || uploadBox.contains(e.target) && e.target !== selectFileBtn) {
+        fileInput.click();
+    }
+});
 
 uploadBox.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -61,7 +66,7 @@ fileInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) {
         handleFileSelect(e.target.files[0]);
     }
-});
+}, { once: false });
 
 cancelBtn.addEventListener('click', resetUpload);
 newUploadBtn.addEventListener('click', resetUpload);
