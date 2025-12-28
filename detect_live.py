@@ -24,19 +24,35 @@ def detect_live_frame(frame_path):
         print(json.dumps({"error": "Could not read frame"}))
         sys.exit(1)
     
-    # Run YOLO inference
-    results = model(frame, verbose=False)
+    # Resize frame for faster processing (reduce resolution by 50%)
+    height, width = frame.shape[:2]
+    new_width = width // 2
+    new_height = height // 2
+    frame_resized = cv2.resize(frame, (new_width, new_height))
+    
+    # Run YOLO inference on smaller frame
+    results = model(frame_resized, verbose=False, imgsz=416)  # Smaller input size
     detections = results[0].boxes.data.cpu().numpy()
+    
+    # Scale detection boxes back to original size
+    scale_x = width / new_width
+    scale_y = height / new_height
     
     pets_count = 0
     humans_count = 0
     detection_list = []
     
-    # Draw detections
+    # Draw detections on original frame
     for det in detections:
         x1, y1, x2, y2, conf, cls_id = det
         cls_id = int(cls_id)
         label = class_names.get(cls_id, "Unknown")
+        
+        # Scale coordinates back to original size
+        x1 = int(x1 * scale_x)
+        y1 = int(y1 * scale_y)
+        x2 = int(x2 * scale_x)
+        y2 = int(y2 * scale_y)
         
         if cls_id in HUMAN_CLASSES:
             color = (0, 255, 0)  # Green for humans
@@ -49,22 +65,22 @@ def detect_live_frame(frame_path):
         else:
             continue
         
-        # Draw bounding box
-        cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
+        # Draw bounding box on original frame
+        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
         
         # Draw label with background
         text = f"{label} {conf:.2f}"
         (text_width, text_height), baseline = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
-        cv2.rectangle(frame, (int(x1), int(y1) - text_height - 5), 
-                     (int(x1) + text_width, int(y1)), color, -1)
-        cv2.putText(frame, text, (int(x1), int(y1) - 3),
+        cv2.rectangle(frame, (x1, y1 - text_height - 5), 
+                     (x1 + text_width, y1), color, -1)
+        cv2.putText(frame, text, (x1, y1 - 3),
                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
         
         detection_list.append({
             "type": detection_type,
             "label": label,
             "confidence": float(conf),
-            "bbox": [int(x1), int(y1), int(x2), int(y2)]
+            "bbox": [x1, y1, x2, y2]
         })
     
     # Add live indicator

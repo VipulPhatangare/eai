@@ -181,6 +181,9 @@ function showResults(result) {
         video.controls = true;
         video.autoplay = false;
         video.style.width = '100%';
+        video.style.maxHeight = '600px';
+        video.style.borderRadius = '8px';
+        video.preload = 'metadata';
         originalMedia.appendChild(video);
     }
 
@@ -198,8 +201,33 @@ function showResults(result) {
         video.src = outputUrl;
         video.controls = true;
         video.autoplay = false;
+        video.loop = false;
         video.style.width = '100%';
+        video.style.maxHeight = '600px';
+        video.style.borderRadius = '8px';
         video.preload = 'metadata';
+        video.controlsList = 'nodownload'; // Remove download from controls
+        
+        // Add playback rate controls
+        video.addEventListener('loadedmetadata', () => {
+            console.log('✅ Processed video ready to play');
+            console.log(`📹 Duration: ${Math.round(video.duration)}s`);
+        });
+        
+        video.addEventListener('error', (e) => {
+            console.error('❌ Video playback error:', e);
+            const errorDetails = video.error ? `Code: ${video.error.code}, Message: ${video.error.message}` : 'Unknown error';
+            console.error('🐞 Video error details:', errorDetails);
+            console.error('📼 Video source:', video.src);
+            processedMedia.innerHTML = `
+                <div style="padding: 20px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; text-align: center;">
+                    <p style="color: #ef4444; font-weight: bold; margin-bottom: 10px;">⚠️ Video playback not supported in browser</p>
+                    <p style="color: #666; margin-bottom: 15px;">The video codec may not be compatible with your browser.</p>
+                    <a href="${outputUrl}" class="btn btn-primary" download style="display: inline-block;">⬇️ Download Video to View</a>
+                </div>
+            `;
+        });
+        
         processedMedia.appendChild(video);
     }
 

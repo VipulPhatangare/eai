@@ -1,6 +1,7 @@
 import cv2
 import sys
 import os
+import subprocess
 from ultralytics import YOLO
 import numpy as np
 
@@ -109,36 +110,17 @@ def process_video(input_path, output_path, model, class_names, HUMAN_CLASSES, PE
     
     print(f"[INFO] Video properties: {width}x{height} @ {fps}fps, {total_frames} frames")
     
-    # Create video writer with universally compatible codecs
-    # Try codecs in order of compatibility
-    codecs_to_try = [
-        ('mp4v', 'MPEG-4'),
-        ('MJPG', 'Motion JPEG'),
-        ('XVID', 'Xvid'),
-        ('X264', 'H.264')
-    ]
+    # Use mp4v codec with MP4 container for best compatibility and compression
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
     
-    out = None
-    used_codec = None
-    
-    for codec_name, codec_desc in codecs_to_try:
-        try:
-            fourcc = cv2.VideoWriter_fourcc(*codec_name)
-            out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
-            if out.isOpened():
-                used_codec = codec_desc
-                print(f"[INFO] Using codec: {codec_desc} ({codec_name})")
-                break
-            else:
-                print(f"[INFO] {codec_desc} codec not available, trying next...")
-        except:
-            print(f"[INFO] Failed to initialize {codec_desc}, trying next...")
-            continue
-    
-    if not out or not out.isOpened():
-        print("[ERROR] Could not create video writer with any codec")
+    if not out.isOpened():
+        print("[ERROR] Could not create video writer with mp4v codec")
         cap.release()
         sys.exit(1)
+    
+    print(f"[INFO] Using codec: MPEG-4 (mp4v) for MP4 output")
+    print(f"[INFO] Note: For smaller file sizes, consider re-encoding with FFmpeg after processing")
     
     frame_count = 0
     pet_alert_count = 0
@@ -203,11 +185,86 @@ def process_video(input_path, output_path, model, class_names, HUMAN_CLASSES, PE
     # Cleanup
     cap.release()
     out.release()
+    cv2.destroyAllWindows()
     
     print(f"[INFO] Total frames: {frame_count}")
     print(f"[INFO] Pet alerts: {pet_alert_count}")
     print(f"[INFO] Humans detected: {human_count}")
-    print(f"[INFO] Output saved: {output_path}")
+    print(f"[INFO] Codec used: MPEG-4 (mp4v)")
+    
+    # Get initial file size
+    initial_size = os.path.getsize(output_path) if os.path.exists(output_path) else 0
+    print(f"[INFO] Initial output size: {initial_size / (1024*1024):.2f} MB")
+    
+    # Try to compress with FFmpeg if available
+    try:
+        # Try to use bundled FFmpeg first (from imageio-ffmpeg package)
+        try:
+            import imageio_ffmpeg
+            ffmpeg_path = imageio_ffmpeg.get_ffmpeg_exe()
+            print(f"[INFO] Using bundled FFmpeg: {ffmpeg_path}")
+        except ImportError:
+            # Fall back to system FFmpeg
+            ffmpeg_path = 'ffmpeg'
+            # Check if system FFmpeg is available
+            ffmpeg_check = subprocess.run([ffmpeg_path, '-version'], 
+                                         capture_output=True, 
+                                         timeout=2,
+                                         creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+            if ffmpeg_check.returncode != 0:
+                raise FileNotFoundError("FFmpeg not found")
+            print("[INFO] Using system FFmpeg")
+        
+        print("[INFO] Compressing video with H.264 codec...")
+        temp_output = output_path + '.temp.mp4'
+        
+        # Compress video with H.264 codec (much better compression and browser support)
+        compress_cmd = [
+            ffmpeg_path, '-i', output_path,
+            '-c:v', 'libx264',  # H.264 codec for browser compatibility
+            '-preset', 'medium',  # Balance between speed and compression
+            '-crf', '23',  # Quality (18-28, lower = better quality, 23 is default)
+            '-movflags', '+faststart',  # Enable web streaming
+            '-y',  # Overwrite output
+            temp_output
+        ]
+        
+        result = subprocess.run(compress_cmd, 
+                              capture_output=True, 
+                              timeout=300,
+                              creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+        
+        if result.returncode == 0 and os.path.exists(temp_output):
+            # Replace original with compressed version
+            os.remove(output_path)
+            os.rename(temp_output, output_path)
+            
+            final_size = os.path.getsize(output_path)
+            compression_ratio = (1 - final_size / initial_size) * 100
+            print(f"[INFO] ✅ Video compressed successfully with H.264!")
+            print(f"[INFO] Final size: {final_size / (1024*1024):.2f} MB")
+            print(f"[INFO] Compression: {compression_ratio:.1f}% smaller")
+            print(f"[INFO] Video is now browser-compatible!")
+        else:
+            print(f"[WARNING] FFmpeg compression failed, using original video")
+            print(f"[WARNING] Browser playback may not work with mp4v codec")
+            if os.path.exists(temp_output):
+                os.remove(temp_output)
+            
+    except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
+        print(f"[WARNING] FFmpeg compression skipped: {type(e).__name__}")
+        print(f"[INFO] Video uses mp4v codec - may not play in all browsers")
+        print(f"[INFO] Install FFmpeg for H.264 encoding: pip install imageio-ffmpeg")
+    
+    # Final file verification
+    if os.path.exists(output_path):
+        file_size = os.path.getsize(output_path)
+        print(f"[INFO] Output saved: {output_path}")
+        print(f"[INFO] Final file size: {file_size / (1024*1024):.2f} MB")
+        if file_size < 1024:
+            print(f"[WARNING] Output file size is very small, video may be corrupted")
+    else:
+        print(f"[ERROR] Output file was not created: {output_path}")
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

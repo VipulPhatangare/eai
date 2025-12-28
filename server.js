@@ -67,7 +67,8 @@ function streamVideo(filePath, req, res) {
     const ext = path.extname(filePath).toLowerCase();
     const contentType = ext === '.mp4' ? 'video/mp4' : 
                        ext === '.avi' ? 'video/x-msvideo' :
-                       ext === '.mov' ? 'video/quicktime' : 
+                       ext === '.mov' ? 'video/quicktime' :
+                       ext === '.mkv' ? 'video/x-matroska' :
                        'application/octet-stream';
 
     if (range) {
@@ -168,10 +169,15 @@ app.post('/upload', upload.single('file'), (req, res) => {
     }
 
     const inputPath = req.file.path;
-    const outputFilename = 'processed_' + req.file.filename;
+    const isVideo = req.file.mimetype.startsWith('video');
+    // Use .mp4 for videos (best web support), keep original extension for images
+    const outputExt = isVideo ? '.mp4' : path.extname(req.file.filename);
+    const baseName = path.basename(req.file.filename, path.extname(req.file.filename));
+    const outputFilename = 'processed_' + baseName + outputExt;
     const outputPath = path.join('output', outputFilename);
 
     log('[SERVER] Processing file:', inputPath);
+    log('[SERVER] Output will be:', outputFilename);
 
     // Determine Python command based on environment
     const pythonCmd = process.env.NODE_ENV === 'production' 
